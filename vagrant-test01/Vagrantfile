@@ -1,0 +1,21 @@
+Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/jammy64"
+  config.vm.box_version = "20241002.0.0"
+
+  # Configure the hostname
+  config.vm.hostname = "ubuntu-jammy"
+
+  # configuration du provider virtualbox
+  config.vm.provider "virtualbox" do |vb|
+    vb.name = "ubuntu-jammy"
+    vb.memory = "2048"
+    vb.cpus = 2
+  end
+
+  # Redirection de port : Windows localhost:8080 -> VM port 8080 (où tournera le conteneur Docker)
+  config.vm.network "forwarded_port", guest: 8080, host: 8080
+
+  # Provisioning : installation automatique de Docker dans la VM
+  config.vm.provision "docker-install", type: "shell", path: "scripts/install-docker.sh"
+
+end

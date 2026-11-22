@@ -1,0 +1,54 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/mon-site
+
+jobs:
+  test:
+    name: CI - Tests automatisÃ©s
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: vagrant-test01/app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm test
+
+  build-and-push:
+    name: CD - Build et push sur Docker Hub
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: vagrant-test01/app
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ github.sha }}
+
+  smoke-test:
+    name: Test de l'image publiÃ©e
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Lancer l'image depuis Docker Hub et la tester
+        run: |
+          docker run -d --name site -p 8080:3000 ${{ env.IMAGE }}:latest
+          for i in $(seq 1 15); do curl -sf localhost:8080/health && break; sleep 2; done
+          curl -sf localhost:8080/ | grep "Gilles Parfait"

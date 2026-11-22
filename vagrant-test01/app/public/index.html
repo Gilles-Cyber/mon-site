@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="Gilles Parfait">
+  <title>Gilles Parfait | TP Vagrant + Docker</title>
+  <style>
+    body { font-family: sans-serif; background: #1d63ed; color: white; text-align: center; padding-top: 70px; margin: 0 16px; }
+    .box { background: white; color: #222; display: inline-block; padding: 30px 50px; border-radius: 12px; max-width: 640px; }
+    h1 { margin-bottom: 4px; }
+    .auteur { color: #1d63ed; font-size: 1.3em; font-weight: bold; margin-top: 0; }
+    code { background: #eee; padding: 2px 6px; border-radius: 4px; }
+    footer { margin-top: 24px; opacity: .85; font-size: .9em; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>🐳 Ça marche !</h1>
+    <p class="auteur">Réalisé par Gilles Parfait</p>
+    <p>Cette page est servie par un <b>conteneur Docker</b> (image <code>mon-site</code> (<span id="version">?</span>))</p>
+    <p>qui tourne dans une <b>VM Ubuntu 22.04</b> créée avec <b>Vagrant</b> et <b>VirtualBox</b>.</p>
+    <p>Windows (localhost:8080) → VM (port 8080) → conteneur (port 80)</p>
+  </div>
+  <footer>© Gilles Parfait · TP Vagrant &amp; Docker</footer>
+<script>fetch("/api/info").then(r=>r.json()).then(d=>{document.getElementById("version").textContent="v"+d.version}).catch(()=>{});</script>
+</body>
+</html>
