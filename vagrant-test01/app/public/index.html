@@ -2,27 +2,197 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="author" content="Gilles Parfait">
-  <title>Gilles Parfait | TP Vagrant + Docker</title>
+  <title>Météo | Gilles Parfait</title>
   <style>
-    body { font-family: sans-serif; background: #1d63ed; color: white; text-align: center; padding-top: 70px; margin: 0 16px; }
-    .box { background: white; color: #222; display: inline-block; padding: 30px 50px; border-radius: 12px; max-width: 640px; }
-    h1 { margin-bottom: 4px; }
-    .auteur { color: #1d63ed; font-size: 1.3em; font-weight: bold; margin-top: 0; }
-    code { background: #eee; padding: 2px 6px; border-radius: 4px; }
-    footer { margin-top: 24px; opacity: .85; font-size: .9em; }
+    :root { --glass: rgba(255,255,255,.14); --line: rgba(255,255,255,.28); }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; font-family: system-ui, "Segoe UI", sans-serif; color: #fff;
+           background: linear-gradient(160deg, #1d63ed, #0b1d4d); transition: background 1.2s; overflow-x: hidden; }
+    body.sunny  { background: linear-gradient(160deg, #36a2ff, #ffb347); }
+    body.night  { background: linear-gradient(160deg, #0b1030, #2b1d5c); }
+    body.cloudy { background: linear-gradient(160deg, #6c7a89, #3b4652); }
+    body.rainy  { background: linear-gradient(160deg, #3a4a63, #121c2d); }
+    body.snowy  { background: linear-gradient(160deg, #9fb7d1, #5a6f8c); }
+    body.stormy { background: linear-gradient(160deg, #2b2b3d, #0c0c16); }
+    canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+    main { position: relative; z-index: 1; max-width: 880px; margin: 0 auto; padding: 28px 16px 40px; }
+    .glass { background: var(--glass); border: 1px solid var(--line); border-radius: 24px;
+             backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: 0 10px 40px rgba(0,0,0,.2); }
+    header { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+    header h1 { margin: 0; font-size: 1.1rem; font-weight: 600; opacity: .9; }
+    form { display: flex; gap: 8px; }
+    input { padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--glass);
+            color: #fff; font-size: 1rem; outline: none; width: 190px; }
+    input::placeholder { color: rgba(255,255,255,.7); }
+    button { padding: 10px 18px; border-radius: 999px; border: 0; background: #fff; color: #0b1d4d; font-weight: 700; cursor: pointer; }
+    .now { padding: 28px; text-align: center; animation: rise .8s both; }
+    .icon { font-size: 5.5rem; display: inline-block; animation: float 4s ease-in-out infinite; filter: drop-shadow(0 8px 12px rgba(0,0,0,.25)); }
+    .city { font-size: 1.6rem; font-weight: 600; margin: 4px 0 0; }
+    .temp { font-size: 5.5rem; font-weight: 200; line-height: 1; margin: 6px 0; }
+    .desc { font-size: 1.2rem; opacity: .9; }
+    .stats { display: flex; justify-content: center; gap: 26px; flex-wrap: wrap; margin-top: 16px; opacity: .95; }
+    .days { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px; margin-top: 16px; }
+    .day { padding: 16px 8px; text-align: center; animation: rise .8s both; transition: transform .25s; }
+    .day:hover { transform: translateY(-6px) scale(1.04); }
+    .day .e { font-size: 2.2rem; }
+    .day .d { font-weight: 600; text-transform: capitalize; }
+    .day .t { opacity: .9; }
+    .bottom { display: grid; grid-template-columns: 1fr auto; gap: 12px; margin-top: 16px; align-items: stretch; }
+    .info { padding: 18px 22px; font-size: .95rem; line-height: 1.6; }
+    .qr { padding: 14px; text-align: center; animation: rise 1s both; }
+    #qrcode { background: #fff; padding: 8px; border-radius: 12px; display: inline-block; line-height: 0; }
+    .qr small { display: block; margin-top: 6px; opacity: .9; font-size: .75rem; word-break: break-all; max-width: 150px; }
+    footer { text-align: center; margin-top: 22px; opacity: .85; font-size: .85rem; }
+    @keyframes float { 50% { transform: translateY(-14px) rotate(3deg); } }
+    @keyframes rise { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+    @media (max-width: 600px) { .bottom { grid-template-columns: 1fr; } .temp { font-size: 4.2rem; } }
   </style>
 </head>
 <body>
-  <div class="box">
-    <h1>🐳 Ça marche !</h1>
-    <p class="auteur">Réalisé par Gilles Parfait</p>
-    <p>Cette page est servie par un <b>conteneur Docker</b> (image <code>mon-site</code> (<span id="version">?</span>))</p>
-    <p>qui tourne dans une <b>VM Ubuntu 22.04</b> créée avec <b>Vagrant</b> et <b>VirtualBox</b>.</p>
-    <p><b>D&eacute;ploy&eacute; automatiquement : GitHub Actions &rarr; Docker Hub &rarr; Watchtower &rarr; VM.</b></p>
-    <p>Windows (localhost:8080) → VM (port 8080) → conteneur (port 80)</p>
-  </div>
+<canvas id="fx"></canvas>
+<main>
+  <header>
+    <h1>🌦️ Météo · par Gilles Parfait</h1>
+    <form id="search"><input id="q" placeholder="Chercher une ville…" autocomplete="off"><button>OK</button></form>
+  </header>
+
+  <section class="glass now">
+    <div class="icon" id="icon">⏳</div>
+    <p class="city" id="city">Chargement…</p>
+    <div class="temp" id="temp">--°</div>
+    <div class="desc" id="desc"></div>
+    <div class="stats"><span id="wind"></span><span id="hum"></span><span id="feel"></span></div>
+  </section>
+
+  <section class="days" id="days"></section>
+
+  <section class="bottom">
+    <div class="glass info">
+      <b>Comment ça marche ?</b><br>
+      Cette page est servie par un <b>conteneur Docker</b> (<code>mon-site</code> <span id="version">?</span>)
+      dans une <b>VM Ubuntu</b> créée avec <b>Vagrant</b>. Déployée automatiquement par
+      <b>GitHub Actions → Docker Hub → Watchtower</b>, et surveillée par <b>Prometheus + Grafana</b>.<br>
+      Données météo : Open-Meteo.
+    </div>
+    <div class="glass qr">
+      <div id="qrcode"></div>
+      <small id="qrurl"></small>
+      <small>📱 Scanne pour ouvrir</small>
+    </div>
+  </section>
   <footer>© Gilles Parfait · TP Vagrant &amp; Docker</footer>
-<script>fetch("/api/info").then(r=>r.json()).then(d=>{document.getElementById("version").textContent="v"+d.version}).catch(()=>{});</script>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+
+// ---- Codes météo WMO -> emoji, texte, ambiance ----
+function describe(code, isDay) {
+  if (code === 0)  return isDay ? ['☀️', 'Grand soleil', 'sunny'] : ['🌙', 'Ciel dégagé', 'night'];
+  if (code <= 2)   return [isDay ? '⛅' : '☁️', 'Éclaircies', isDay ? 'sunny' : 'night'];
+  if (code === 3)  return ['☁️', 'Couvert', 'cloudy'];
+  if (code <= 48)  return ['🌫️', 'Brouillard', 'cloudy'];
+  if (code <= 57)  return ['🌦️', 'Bruine', 'rainy'];
+  if (code <= 67)  return ['🌧️', 'Pluie', 'rainy'];
+  if (code <= 77)  return ['❄️', 'Neige', 'snowy'];
+  if (code <= 82)  return ['🌧️', 'Averses', 'rainy'];
+  if (code <= 86)  return ['🌨️', 'Averses de neige', 'snowy'];
+  return ['⛈️', 'Orage', 'stormy'];
+}
+
+// ---- Animation de fond (canvas) : pluie, neige, étoiles, éclairs, soleil ----
+const cv = $('fx'), ctx = cv.getContext('2d');
+let W, H, mode = 'cloudy', parts = [], flash = 0;
+function resize() { W = cv.width = innerWidth; H = cv.height = innerHeight; }
+addEventListener('resize', resize); resize();
+
+function setMode(m) {
+  mode = m;
+  document.body.className = m;
+  const n = { rainy: 160, stormy: 220, snowy: 120, night: 90, sunny: 18, cloudy: 14 }[m] || 20;
+  parts = Array.from({ length: n }, () => ({
+    x: Math.random() * W, y: Math.random() * H, r: Math.random() * 2 + 1,
+    s: Math.random() * 3 + 2, o: Math.random()
+  }));
+}
+function frame(t) {
+  ctx.clearRect(0, 0, W, H);
+  if (mode === 'sunny') {                           // rayons de soleil qui tournent
+    ctx.save(); ctx.translate(W * .85, H * .1); ctx.rotate(t / 8000);
+    for (let i = 0; i < 12; i++) { ctx.rotate(Math.PI / 6); ctx.fillStyle = 'rgba(255,230,120,.10)';
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(W, -60); ctx.lineTo(W, 60); ctx.fill(); }
+    ctx.restore();
+  }
+  for (const p of parts) {
+    if (mode === 'rainy' || mode === 'stormy') {
+      ctx.strokeStyle = 'rgba(180,210,255,.6)'; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - 3, p.y + 14); ctx.stroke();
+      p.y += p.s * 5; p.x -= 1.5;
+    } else if (mode === 'snowy') {
+      ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r + 1, 0, 7); ctx.fill();
+      p.y += p.s * .5; p.x += Math.sin(t / 700 + p.o * 9) * .6;
+    } else if (mode === 'night') {
+      ctx.fillStyle = `rgba(255,255,255,${.4 + .6 * Math.abs(Math.sin(t / 900 + p.o * 9))})`;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r * .7, 0, 7); ctx.fill();
+    } else {                                        // nuages qui dérivent
+      ctx.fillStyle = 'rgba(255,255,255,.10)';
+      ctx.beginPath(); ctx.ellipse(p.x, p.y, 90 + p.r * 30, 28 + p.r * 8, 0, 0, 7); ctx.fill();
+      p.x += p.s * .15; if (p.x > W + 200) p.x = -200;
+    }
+    if (p.y > H) { p.y = -20; p.x = Math.random() * W; }
+    if (p.x < -20) p.x = W + 10;
+  }
+  if (mode === 'stormy') {                          // éclairs aléatoires
+    if (Math.random() < .004) flash = 1;
+    if (flash > 0) { ctx.fillStyle = `rgba(255,255,255,${flash * .5})`; ctx.fillRect(0, 0, W, H); flash -= .05; }
+  }
+  requestAnimationFrame(frame);
+}
+setMode('cloudy'); requestAnimationFrame(frame);
+
+// ---- Météo (Open-Meteo : gratuit, sans clé) ----
+async function loadWeather(lat, lon, name) {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+    `&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,is_day` +
+    `&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=6`;
+  const d = await (await fetch(url)).json();
+  const c = d.current, [emo, txt, m] = describe(c.weather_code, c.is_day);
+  $('icon').textContent = emo; $('city').textContent = name;
+  $('temp').textContent = Math.round(c.temperature_2m) + '°';
+  $('desc').textContent = txt;
+  $('wind').textContent = '💨 ' + Math.round(c.wind_speed_10m) + ' km/h';
+  $('hum').textContent = '💧 ' + c.relative_humidity_2m + ' %';
+  $('feel').textContent = '🌡️ ressenti ' + Math.round(c.apparent_temperature) + '°';
+  setMode(m);
+  $('days').innerHTML = d.daily.time.slice(1).map((day, i) => {
+    const [e] = describe(d.daily.weather_code[i + 1], 1);
+    const n = new Date(day).toLocaleDateString('fr-FR', { weekday: 'short' });
+    return `<div class="glass day" style="animation-delay:${i * .1}s"><div class="d">${n}</div>` +
+      `<div class="e">${e}</div><div class="t">${Math.round(d.daily.temperature_2m_max[i + 1])}° / ` +
+      `${Math.round(d.daily.temperature_2m_min[i + 1])}°</div></div>`;
+  }).join('');
+}
+async function searchCity(q) {
+  const g = await (await fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&language=fr&name=' + encodeURIComponent(q))).json();
+  if (!g.results) { $('city').textContent = 'Ville introuvable 😕'; return; }
+  const r = g.results[0];
+  loadWeather(r.latitude, r.longitude, r.name + (r.country ? ', ' + r.country : ''));
+}
+$('search').addEventListener('submit', e => { e.preventDefault(); if ($('q').value.trim()) searchCity($('q').value.trim()); });
+loadWeather(4.05, 9.7, 'Douala, Cameroun').catch(() => { $('city').textContent = 'Météo indisponible (pas d\'Internet ?)'; });
+
+// ---- QR code vers l'adresse du site ----
+const local = ['localhost', '127.0.0.1'].includes(location.hostname);
+const siteUrl = local ? 'http://192.168.56.10' : location.origin;
+$('qrurl').textContent = siteUrl;
+try { new QRCode($('qrcode'), { text: siteUrl, width: 130, height: 130 }); }
+catch (e) { $('qrcode').textContent = siteUrl; }
+
+// ---- Version déployée ----
+fetch('/api/info').then(r => r.json()).then(d => { $('version').textContent = 'v' + d.version; }).catch(() => {});
+</script>
 </body>
 </html>
