@@ -1,0 +1,49 @@
+# Pile complète lancée dans la VM : application + observabilité + mise à jour automatique.
+services:
+  app:
+    image: kinggilles/mon-site:latest
+    container_name: site
+    restart: unless-stopped
+    ports:
+      - "80:3000"            # http://<IP de la VM>/
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"   # Watchtower surveille cette image
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"          # http://<IP de la VM>:9090
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true        # le prof peut voir les tableaux de bord sans se connecter
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"          # http://<IP de la VM>:3000
+    depends_on:
+      - prometheus
+
+  # Vérifie toutes les 30 s s'il y a une nouvelle image sur Docker Hub
+  # et relance l'application avec la nouvelle version.
+  watchtower:
+    image: nickfedor/watchtower:latest
+    container_name: watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_POLL_INTERVAL=30
+      - WATCHTOWER_LABEL_ENABLE=true
+      - WATCHTOWER_CLEANUP=true

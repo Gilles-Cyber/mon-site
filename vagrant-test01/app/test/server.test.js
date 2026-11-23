@@ -28,6 +28,15 @@ test('GET /api/info renvoie la version', async () => {
   assert.ok(body.version);
 });
 
+test('GET /metrics expose les métriques Prometheus', async () => {
+  await fetch(base + '/health');
+  const res = await fetch(base + '/metrics');
+  assert.strictEqual(res.status, 200);
+  const text = await res.text();
+  assert.match(text, /http_requests_total\{route="\/health",code="200"\} \d+/);
+  assert.match(text, /app_uptime_seconds \d+/);
+});
+
 test('page inconnue -> 404', async () => {
   const res = await fetch(base + '/nexiste-pas');
   assert.strictEqual(res.status, 404);

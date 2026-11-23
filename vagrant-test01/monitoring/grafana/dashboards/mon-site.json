@@ -1,0 +1,47 @@
+{
+  "title": "Mon site - Observabilité",
+  "uid": "mon-site",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": { "from": "now-15m", "to": "now" },
+  "panels": [
+    {
+      "id": 1, "type": "stat", "title": "Version déployée",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "textMode": "name", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [{ "expr": "app_info", "legendFormat": "{{version}}", "instant": true }]
+    },
+    {
+      "id": 2, "type": "stat", "title": "Application en ligne (1 = oui)",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "up{job=\"mon-site\"}", "instant": true }]
+    },
+    {
+      "id": 3, "type": "stat", "title": "Requêtes totales",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(http_requests_total)", "instant": true }]
+    },
+    {
+      "id": 4, "type": "stat", "title": "Uptime (secondes)",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "app_uptime_seconds", "instant": true }]
+    },
+    {
+      "id": 5, "type": "timeseries", "title": "Requêtes par seconde (par route)",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum by (route) (rate(http_requests_total[1m]))", "legendFormat": "{{route}}" }]
+    },
+    {
+      "id": 6, "type": "timeseries", "title": "Requêtes par code HTTP",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum by (code) (rate(http_requests_total[1m]))", "legendFormat": "{{code}}" }]
+    }
+  ]
+}

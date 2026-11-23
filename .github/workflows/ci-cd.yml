@@ -11,17 +11,19 @@ env:
 
 jobs:
   test:
-    name: CI - Tests automatisÃ©s
+    name: CI - Tests automatisés
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: vagrant-test01/app
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm test
+      - name: Tests de l'application
+        working-directory: vagrant-test01/app
+        run: npm test
+      - name: Validation du docker-compose.yml
+        working-directory: vagrant-test01
+        run: docker compose config -q
 
   build-and-push:
     name: CD - Build et push sur Docker Hub
@@ -43,7 +45,7 @@ jobs:
             ${{ env.IMAGE }}:${{ github.sha }}
 
   smoke-test:
-    name: Test de l'image publiÃ©e
+    name: Test de l'image publiée
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
@@ -52,3 +54,7 @@ jobs:
           docker run -d --name site -p 8080:3000 ${{ env.IMAGE }}:latest
           for i in $(seq 1 15); do curl -sf localhost:8080/health && break; sleep 2; done
           curl -sf localhost:8080/ | grep "Gilles Parfait"
+          curl -sf localhost:8080/metrics | grep http_requests_total
+
+# Déploiement local : le conteneur Watchtower, qui tourne dans la VM Vagrant,
+# détecte la nouvelle image sur Docker Hub et met à jour l'application tout seul.

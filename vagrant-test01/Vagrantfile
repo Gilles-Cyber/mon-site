@@ -12,10 +12,21 @@ Vagrant.configure("2") do |config|
     vb.cpus = 2
   end
 
-  # Redirection de port : Windows localhost:8080 -> VM port 8080 (où tournera le conteneur Docker)
-  config.vm.network "forwarded_port", guest: 8080, host: 8080
+  # IP privée de la VM : l'application est accessible en tapant http://192.168.56.10
+  config.vm.network "private_network", ip: "192.168.56.10"
+
+  # Redirections depuis Windows (localhost) : application, Grafana, Prometheus
+  config.vm.network "forwarded_port", guest: 80, host: 8080
+  config.vm.network "forwarded_port", guest: 3000, host: 3001
+  config.vm.network "forwarded_port", guest: 9090, host: 9090
 
   # Provisioning : installation automatique de Docker dans la VM
   config.vm.provision "docker-install", type: "shell", path: "scripts/install-docker.sh"
 
+  # À chaque "vagrant up" : démarre (ou met à jour) l'application + Prometheus + Grafana + Watchtower
+  config.vm.provision "stack", type: "shell", run: "always", inline: <<-SHELL
+    docker rm -f site-gilles-parfait 2>/dev/null || true
+    docker rm -f site 2>/dev/null || true
+    cd /vagrant && docker compose up -d --remove-orphans
+  SHELL
 end
