@@ -203,44 +203,75 @@ Ce que fait chaque ligne :
 - Le message « guest additions do not match » au démarrage est sans gravité : le dossier partagé `/vagrant` fonctionne.
 - **`vagrant` n'est pas reconnu dans un terminal ?** Ferme puis rouvre le terminal, pour recharger le PATH.
 
-## ðŸš€ Partie 3 : site web + CI/CD (GitHub Actions) + Docker Hub
+## 🚀 Partie 3 : CI/CD, observabilité et déploiement automatique
 
-### Ce qui a changÃ©
-- `vagrant-test01/app/` contient maintenant une vraie petite application **Node.js** (`server.js`, sans dÃ©pendance) avec une page (`public/index.html`), `/health` et `/api/info`.
-- **Tests automatiques** : `test/server.test.js` (lancÃ©s par `npm test`).
-- **Workflow** `.github/workflows/ci-cd.yml`, dÃ©clenchÃ© Ã  chaque `git push` sur `main` :
-  1. **CI** : lance les tests ;
-  2. **CD** : si les tests passent, construit l'image et la pousse sur Docker Hub (`:latest` et `:<commit>`) ;
-  3. **Smoke test** : tÃ©lÃ©charge l'image publiÃ©e depuis Docker Hub, la lance et vÃ©rifie qu'elle rÃ©pond.
+### Architecture
 
-### Mise en place (une seule fois)
-1. CrÃ©er un compte sur hub.docker.com et un **Access Token** (Account settings â†’ Security).
-2. CrÃ©er un dÃ©pÃ´t GitHub public, puis dans *Settings â†’ Secrets and variables â†’ Actions* ajouter :
-   - `DOCKERHUB_USERNAME` : ton identifiant Docker Hub
-   - `DOCKERHUB_TOKEN` : le token
-3. Pousser le code :
-   ```powershell
-   cd "C:\Users\Lenovo\Pictures\drive\OneDrive\Documents\Vagrant"
-   git init -b main
-   git add .
-   git commit -m "TP Vagrant Docker CI/CD"
-   git remote add origin https://github.com/<ton-user>/<ton-depot>.git
-   git push -u origin main
-   ```
-4. Onglet **Actions** de GitHub : le pipeline se lance tout seul. Ensuite, chaque modification poussÃ©e relance CI + CD.
-
-### Tester dans la VM
-```bash
-vagrant ssh
-cd /vagrant/app
-docker build -t mon-site . && docker run -d --name site -p 8080:3000 mon-site
-curl localhost:8080
 ```
-(les ports : Windows 8080 â†’ VM 8080 â†’ conteneur 3000)
+git push ──▶ GitHub Actions ──▶ tests ──▶ build + push image ──▶ Docker Hub (kinggilles/mon-site:latest)
+                                                                      │
+                          VM Vagrant (192.168.56.10)                  │ (toutes les 30 s)
+              ┌───────────────────────────────────────────┐           ▼
+              │ Watchtower ── détecte la nouvelle image ──▶ relance le conteneur "site"
+              │ site (port 80)  ◀── Prometheus (9090) ◀── Grafana (3000)
+              └───────────────────────────────────────────┘
+```
+
+### Fichiers
+
+```
+.github/workflows/ci-cd.yml        ← pipeline CI/CD
+vagrant-test01/
+├── Vagrantfile                    ← VM, IP privée 192.168.56.10, lance la pile au démarrage
+├── docker-compose.yml             ← site + Prometheus + Grafana + Watchtower
+├── monitoring/                    ← config Prometheus + tableau de bord Grafana (provisionné)
+└── app/                           ← application Node.js (server.js, public/, test/, Dockerfile)
+```
+
+### L'application
+Petit serveur Node.js sans dépendance. Routes : `/` (page), `/health`, `/api/info` (version), `/metrics` (format Prometheus).
+Les tests automatiques sont dans `app/test/server.test.js` (`npm test`).
+
+### Le pipeline GitHub Actions (à chaque `git push` sur `main`)
+1. **CI** : tests de l'application + validation du `docker-compose.yml` ;
+2. **CD** : construction de l'image et envoi sur Docker Hub (`:latest` et `:<commit>`) ;
+3. **Test de l'image publiée** : elle est téléchargée, lancée et vérifiée (page + métriques).
+
+Secrets GitHub nécessaires : `DOCKERHUB_USERNAME` et `DOCKERHUB_TOKEN`.
+
+### Déploiement automatique dans la VM
+Les serveurs de GitHub ne peuvent pas atteindre une VM sur un PC personnel. C'est donc la VM qui vient chercher la mise à jour :
+le conteneur **Watchtower** interroge Docker Hub toutes les 30 secondes et, dès qu'une nouvelle image `latest` existe, il remplace le conteneur `site`.
+Résultat : modifier le code, `git push`, et environ 1 à 2 minutes plus tard la VM sert la nouvelle version.
+
+### Accès (depuis l'ordinateur qui héberge la VM)
+
+| Service | Adresse |
+|---|---|
+| Application | http://192.168.56.10 (ou http://localhost:8080) |
+| Métriques brutes | http://192.168.56.10/metrics |
+| Prometheus | http://192.168.56.10:9090 |
+| Grafana | http://192.168.56.10:3000 (consultation libre ; admin : `admin` / `admin`) — tableau de bord « Mon site - Observabilité » |
+
+### Démarrer
+```powershell
+cd "C:\Users\Lenovo\Pictures\drive\OneDrive\Documents\Vagrant\vagrant-test01"
+vagrant up            # démarre la VM et toute la pile Docker
+vagrant ssh -c "docker ps"
+```
+
+### Faire une mise à jour (démonstration)
+Modifier `app/public/index.html` (et la `version` dans `app/package.json`), puis :
+```powershell
+git add -A
+git commit -m "mon changement"
+git push
+```
+Suivre le pipeline dans l'onglet **Actions** du dépôt ; la version affichée dans Grafana et sur la page change d'elle-même.
 
 ### Pour le prof : tester l'application sur son ordinateur
-Il suffit d'avoir Docker, puis :
+Avec Docker installé :
 ```bash
 docker run -d -p 8080:3000 --name site kinggilles/mon-site:latest
 ```
-Puis ouvrir http://localhost:8080. Il rÃ©cupÃ¨re toujours la derniÃ¨re version publiÃ©e par le pipeline.
+Puis ouvrir http://localhost:8080. Pour la pile complète (avec Grafana et Prometheus) : cloner le dépôt `Gilles-Cyber/mon-site`, puis dans `vagrant-test01/` lancer `docker compose up -d` (Grafana sur http://localhost:3000, application sur http://localhost).
