@@ -165,8 +165,7 @@ export default function App() {
         {loading && !current && <p className="loading">Chargement du ciel…</p>}
 
         <footer className="foot">
-          Données météo : <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> · Projet de Pauline Merveille KEUMENI DASSIE
-        </footer>
+          Données météo : <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>        </footer>
       </div>
     </>
   )
