@@ -10,8 +10,14 @@ test.before(async () => {
 });
 test.after(() => server.close());
 
-test('GET / renvoie la page avec le nom de l\'auteur', async () => {
+test('GET / renvoie la page d\'accueil', async () => {
   const res = await fetch(base + '/');
+  assert.strictEqual(res.status, 200);
+  assert.match(res.headers.get('content-type'), /text\/html/);
+});
+
+test('GET /apropos.html renvoie la page avec le nom de l\'auteur', async () => {
+  const res = await fetch(base + '/apropos.html');
   assert.strictEqual(res.status, 200);
   assert.match(await res.text(), /Gilles Parfait/);
 });

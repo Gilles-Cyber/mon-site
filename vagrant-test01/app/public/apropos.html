@@ -42,7 +42,8 @@
     .bottom { display: grid; grid-template-columns: 1fr auto; gap: 12px; margin-top: 16px; align-items: stretch; }
     .info { padding: 18px 22px; font-size: .95rem; line-height: 1.6; }
     .qr { padding: 14px; text-align: center; animation: rise 1s both; }
-    #qrcode { background: #fff; padding: 8px; border-radius: 12px; display: inline-block; line-height: 0; }
+    #qrcode { background: #fff; border-radius: 12px; display: inline-block; line-height: 0; overflow: hidden; }
+    #qrcode svg { width: 150px; height: 150px; }
     .qr small { display: block; margin-top: 6px; opacity: .9; font-size: .75rem; word-break: break-all; max-width: 150px; }
     footer { text-align: center; margin-top: 22px; opacity: .85; font-size: .85rem; }
     @keyframes float { 50% { transform: translateY(-14px) rotate(3deg); } }
@@ -85,7 +86,7 @@
   <footer>© Gilles Parfait · TP Vagrant &amp; Docker</footer>
 </main>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="qr.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 
@@ -188,7 +189,7 @@ loadWeather(4.05, 9.7, 'Douala, Cameroun').catch(() => { $('city').textContent =
 const local = ['localhost', '127.0.0.1'].includes(location.hostname);
 const siteUrl = local ? 'http://192.168.56.10' : location.origin;
 $('qrurl').textContent = siteUrl;
-try { new QRCode($('qrcode'), { text: siteUrl, width: 130, height: 130 }); }
+try { $('qrcode').innerHTML = qrSvg(siteUrl, 4); }
 catch (e) { $('qrcode').textContent = siteUrl; }
 
 // ---- Version déployée ----

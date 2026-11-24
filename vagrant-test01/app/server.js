@@ -56,7 +56,11 @@ function createServer() {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify({ name: pkg.name, version: pkg.version, author: 'Gilles Parfait' }));
     }
-    const file = path.join(PUBLIC, url === '/' ? 'index.html' : url);
+    // Page d'accueil : l'application météo (index.html) si elle est présente,
+    // sinon la page de présentation (apropos.html).
+    let name = url;
+    if (url === '/') name = fs.existsSync(path.join(PUBLIC, 'index.html')) ? 'index.html' : 'apropos.html';
+    const file = path.join(PUBLIC, name);
     if (!file.startsWith(PUBLIC)) { res.writeHead(403); return res.end('Interdit'); }
     fs.readFile(file, (err, data) => {
       if (err) { res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('Page introuvable'); }
