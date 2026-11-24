@@ -276,5 +276,5 @@ docker run -d -p 8080:3000 --name site kinggilles/mon-site:latest
 ```
 Puis ouvrir http://localhost:8080. Pour la pile complète (avec Grafana et Prometheus) : cloner le dépôt `Gilles-Cyber/mon-site`, puis dans `vagrant-test01/` lancer `docker compose up -d` (Grafana sur http://localhost:3000, application sur http://localhost).
 
-### Push automatique Ã  l'enregistrement (dÃ©monstration)
-Lancer `.\vagrant-test01\scripts\auto-push.ps1` : dÃ¨s qu'un fichier est enregistrÃ©, le script fait `git add`, `commit` et `push`, ce qui dÃ©clenche GitHub Actions puis la mise Ã  jour de la VM. ArrÃªt : Ctrl+C.
+### Push automatique à l'enregistrement (démonstration)
+Lancer `.\vagrant-test01\scripts\auto-push.ps1` : dès qu'un fichier est enregistré, le script fait `git add`, `commit` et `push`, ce qui déclenche GitHub Actions puis la mise à jour de la VM. Arrêt : Ctrl+C.
