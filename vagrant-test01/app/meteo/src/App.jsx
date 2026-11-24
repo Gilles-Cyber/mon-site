@@ -4,6 +4,7 @@ import { createSky } from './sky.js'
 import { describe, PREVIEWS } from './weather.js'
 import Search from './components/Search.jsx'
 import { Daily, Hourly } from './components/Forecast.jsx'
+import { AUTEUR } from './auteur.js'
 
 // villes proposées en un clic (pratique pendant une présentation)
 const QUICK = [
@@ -78,6 +79,9 @@ export default function App() {
         <header className="top">
           <p className="brand">
             <span aria-hidden="true">🌦️</span> Météo <em>vivante</em>
+          </p>
+          <p className="auteur-demo" style={{ margin: 0, fontWeight: 600 }}>
+            Déployé par {AUTEUR}
           </p>
           <div className="top-tools">
             <Search onSelect={load} />
